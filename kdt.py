@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import pylibusb as usb
-import dbus, hashlib
+import hashlib, sys
 
 def getKindleModel(serial):
     return { '1':'Kindle 1',\
@@ -19,21 +18,24 @@ def getKindlePassword(serial):
 serials = []
 
 # Trying to get devices via UDisks
-try:
-    bus = dbus.SystemBus()
-    ud_manager_obj = bus.get_object("org.freedesktop.UDisks", "/org/freedesktop/UDisks")
-    ud_manager = dbus.Interface(ud_manager_obj, 'org.freedesktop.UDisks')
-    for dev in ud_manager.EnumerateDevices():
-        device_obj = bus.get_object("org.freedesktop.UDisks", dev)
-        device_props = dbus.Interface(device_obj, dbus.PROPERTIES_IFACE)
-        if device_props.Get('org.freedesktop.UDisks.Device', "DriveVendor")=='Kindle' and\
-                device_props.Get('org.freedesktop.UDisks.Device', "DeviceIsDrive"):
-            serials.append(str(device_props.Get('org.freedesktop.UDisks.Device', "DriveSerial")))
-except:
-    print "ERR Can't use UDisks interface"
+if sys.platform.startswith("linux"):
+    try:
+        import dbus
+        bus = dbus.SystemBus()
+        ud_manager_obj = bus.get_object("org.freedesktop.UDisks", "/org/freedesktop/UDisks")
+        ud_manager = dbus.Interface(ud_manager_obj, 'org.freedesktop.UDisks')
+        for dev in ud_manager.EnumerateDevices():
+            device_obj = bus.get_object("org.freedesktop.UDisks", dev)
+            device_props = dbus.Interface(device_obj, dbus.PROPERTIES_IFACE)
+            if device_props.Get('org.freedesktop.UDisks.Device', "DriveVendor")=='Kindle' and\
+                    device_props.Get('org.freedesktop.UDisks.Device', "DeviceIsDrive"):
+                serials.append(str(device_props.Get('org.freedesktop.UDisks.Device', "DriveSerial")))
+    except:
+        sys.stderr.write("ERR Can't use UDisks interface\n")
 
 # Trying to get devices via libusb
 try:
+    import pylibusb as usb
     usb.init()
     if not usb.get_busses():
         usb.find_busses()
@@ -49,9 +51,9 @@ try:
                     if not s in serials:
                         serials.append(s)
                 except usb.USBError, error:
-                    print "ERR Libusb error: %s\nERR May be you is not root?\n"%error.message
+                    sys.stderr.write("ERR Libusb error: %s\nERR May be you is not root?\n"%error.message)
 except:
-    print "ERR Can't use libusb interface"
+    sys.stderr.write("ERR Can't use libusb interface\n")
 
 for serial in serials:
-    print "Device: %s\nSerial: %s\nPassword: %s\n"%(getKindleModel(serial),serial,getKindlePassword(serial))
+    print "Device: %s\nSerial: %s\nPassword: %s"%(getKindleModel(serial),serial,getKindlePassword(serial))
