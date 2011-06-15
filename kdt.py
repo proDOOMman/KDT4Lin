@@ -51,9 +51,12 @@ try:
                     if not s in serials:
                         serials.append(s)
                 except usb.USBError, error:
-                    sys.stderr.write("ERR Libusb error: %s\nERR May be you is not root?\n"%error.message)
+                    sys.stderr.write("ERR Libusb error: %s\nERR May be you is not root?\n"%str(error))
 except:
     sys.stderr.write("ERR Can't use libusb interface\n")
 
-for serial in serials:
-    print "Device: %s\nSerial: %s\nPassword: %s"%(getKindleModel(serial),serial,getKindlePassword(serial))
+if len(serials)==0:
+    print "No Kindle devices found"
+else:
+    for serial in serials:
+        print "Device: %s\nSerial: %s\nPassword: %s"%(getKindleModel(serial),serial,getKindlePassword(serial))
